@@ -7,16 +7,24 @@ properties([
 
 pipeline {
     agent any
+
+    environment {
+        AWS_ACCESS_KEY_ID = 'XXXXXX'
+        AWS_SECRET_ACCESS_KEY = 'XXXXX'
+        AWS_SESSION_TOKEN = 'XXXXX'
+        AWS_DEFAULT_REGION = 'us-east-1'
+    }
+
     stages {
         stage('Checkout from Git') {
             steps {
-                git branch: 'master', url: 'https://github.com/kamonphankanthayod/devsecops-game-pipeline.git'
+                git branch: 'main', url: 'https://github.com/kamonphankanthayod/devsecops-game-pipeline.git'
             }
         }
         stage('Initializing Terraform') {
             steps {
                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
-                dir('EKS-TF') {
+                dir('terraform/EKS-TF') {
                     script {
                         sh 'terraform init'
                     }
@@ -27,7 +35,7 @@ pipeline {
         stage('Validate Terraform Code') {
             steps {
                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
-                dir('EKS-TF') {
+                dir('terraform/EKS-TF') {
                     script {
                         sh 'terraform validate'
                     }
@@ -38,7 +46,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
-                dir('EKS-TF') {
+                dir('terraform/EKS-TF') {
                     script {
                         sh "terraform plan -var-file=${params.'File-Name'}"
                     }
@@ -51,7 +59,7 @@ pipeline {
                 withAWS(credentials: 'aws-key', region: 'us-east-1') {
                 script {
                     echo "${params.'Terraform-Action'}"
-                    dir('EKS-TF') {
+                    dir('terraform/EKS-TF') {
                         script {
                             if (params.'Terraform-Action' == 'plan') {
                                 sh "terraform plan -var-file=${params.'File-Name'}"
