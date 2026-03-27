@@ -18,4 +18,3 @@ resource "aws_eks_node_group" "eks-node-group" {
   disk_size      = 20
 }
 
-data "aws_caller_identity" "current" {}
