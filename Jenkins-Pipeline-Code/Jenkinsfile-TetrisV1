@@ -1,116 +1,139 @@
 pipeline {
     agent any
+
     tools {
         nodejs 'nodejs'
     }
-    environment  {
-        SCANNER_HOME=tool 'sonar-scanner'
+
+    environment {
+        SCANNER_HOME   = tool 'sonar-scanner'
+        IMAGE_NAME     = 'narongkorn24/tetrisv1'
+        APP_DIR        = 'Tetris-V1'
+        MANIFEST_DIR   = 'Manifest-file'
+        GIT_REPO_NAME  = 'devsecops-game-pipeline'
+        GIT_USER_NAME  = 'Narongkornn'
+        GIT_USER_EMAIL = 'narongkorn.mon@dome.tu.ac.th'
     }
+
     stages {
-        stage('Cleaning Workspace') {
+        stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
-        stage('Checkout from Git') {
+
+        stage('Checkout Source') {
             steps {
                 git branch: 'main', url: 'https://github.com/kamonphankanthayod/devsecops-game-pipeline.git'
             }
         }
-        stage('Sonarqube Analysis') {
+
+        stage('SonarQube Analysis') {
             steps {
-                dir('Tetris-V1') {
+                dir("${APP_DIR}") {
                     withSonarQubeEnv('sonar-scanner') {
-                        sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Tetris \
-                        -Dsonar.projectKey=Tetris '''
+                        sh '''
+                            $SCANNER_HOME/bin/sonar-scanner \
+                              -Dsonar.projectName=Tetris-V1 \
+                              -Dsonar.projectKey=Tetris-V1
+                        '''
                     }
                 }
             }
         }
-        stage('Quality Check') {
+
+        stage('Quality Gate') {
             steps {
                 script {
                     waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
                 }
             }
         }
-        stage('Installing Dependencies') {
+
+        stage('Install Dependencies') {
             steps {
-                dir('Tetris-V1') {
+                dir("${APP_DIR}") {
                     sh 'npm install'
                 }
             }
         }
-        stage('OWASP Dependency-Check Scan') {
+
+        stage('OWASP Dependency Check') {
             steps {
-                dir('Tetris-V1') {
+                dir("${APP_DIR}") {
                     dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
                 }
             }
         }
+
         stage('Trivy File Scan') {
             steps {
-                dir('Tetris-V1') {
+                dir("${APP_DIR}") {
                     sh 'trivy fs . > trivyfs.txt'
                 }
             }
         }
-        stage("Docker Image Build") {
+
+        stage('Build Docker Image') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh 'docker system prune -f'
+                    sh 'docker build -t tetrisv1 .'
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
             steps {
                 script {
-                    dir('Tetris-V1') {
-                        withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-                            sh 'docker system prune -f'
-                            sh 'docker build -t tetrisv1 .'
-                        }
+                    withDockerRegistry(credentialsId: 'docker2', toolName: 'docker') {
+                        sh """
+                            docker tag tetrisv1 ${IMAGE_NAME}:${BUILD_NUMBER}
+                            docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                        """
                     }
                 }
             }
         }
-        stage("Docker Image Pushing") {
+
+        stage('Trivy Image Scan') {
             steps {
-                script {
-                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-                        sh 'docker tag tetrisv1 itoniton/tetrisv1:${BUILD_NUMBER}'
-                        sh 'docker push itoniton/tetrisv1:${BUILD_NUMBER}'
-                    }
+                sh "trivy image ${IMAGE_NAME}:${BUILD_NUMBER} > trivyimage.txt"
+            }
+        }
+
+        stage('Update Kubernetes Manifest') {
+            steps {
+                withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+                    sh """
+                        git config user.email '${GIT_USER_EMAIL}'
+                        git config user.name '${GIT_USER_NAME}'
+
+                        currentTag=\$(grep -oP '(?<=image: ${IMAGE_NAME}:)[^ ]+' ${MANIFEST_DIR}/deployment-service.yml || true)
+
+                        if [ -z "\$currentTag" ]; then
+                            echo 'Cannot find current image tag in Manifest-file/deployment-service.yml'
+                            exit 1
+                        fi
+
+                        sed -i "s|image: ${IMAGE_NAME}:\${currentTag}|image: ${IMAGE_NAME}:${BUILD_NUMBER}|g" ${MANIFEST_DIR}/deployment-service.yml
+
+                        git add ${MANIFEST_DIR}/deployment-service.yml
+                        git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+                        git push https://${GITHUB_TOKEN}@github.com/kamonphankanthayod/${GIT_REPO_NAME}.git HEAD:main
+                    """
                 }
             }
         }
-        stage("TRIVY Image Scan") {
-            steps {
-                sh 'trivy image itoniton/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
-            }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully.'
         }
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main', url: 'https://github.com/kamonphankanthayod/devsecops-game-pipeline.git'
-            }
-        }
-        stage('Update Deployment file') {
-            environment {
-                GIT_REPO_NAME = "devsecops-game-pipeline"
-                GIT_USER_NAME = "Toninwza"
-            }
-            steps {
-                dir('Manifest-file') {
-                    withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-                        sh '''
-                            git config user.email "terozeryt@gmail.com"
-                            git config user.name "Toninwza"
-                            BUILD_NUMBER=${BUILD_NUMBER}
-                            echo $BUILD_NUMBER
-                            imageTag=$(grep -oP '(?<=tetrisv1:)[^ ]+' deployment-service.yml)
-                            echo $imageTag
-                            sed -i "s/tetrisv1:${imageTag}/tetrisv1:${BUILD_NUMBER}/" deployment-service.yml
-                            git add deployment-service.yml
-                            git commit -m "Update deployment Image to version \${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                        '''
-                    }
-                }
-            }
+        failure {
+            echo 'Pipeline failed. Please check the stage logs.'
         }
     }
 }

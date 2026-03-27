@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tetris-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kamonphankanthayod/devsecops-game-pipeline.git
+    targetRevision: main
+    path: Manifest-file
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tetris
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
