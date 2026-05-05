@@ -4,7 +4,7 @@
 resource "aws_instance" "ec2" {
   ami                    = data.aws_ami.ami.image_id
   instance_type          = "t3.large"
-  key_name               = var.key-name
+  key_name               = aws_key_pair.jenkins_key.key_name
   subnet_id              = aws_subnet.public-subnet.id
   vpc_security_group_ids = [aws_security_group.security-group.id]
   iam_instance_profile   = "LabInstanceProfile"
