@@ -8,10 +8,14 @@ resource "aws_instance" "ec2" {
   subnet_id              = aws_subnet.public-subnet.id
   vpc_security_group_ids = [aws_security_group.security-group.id]
   iam_instance_profile   = "LabInstanceProfile"
+  
+  # บังคับให้แจก Public IP เพื่อให้ EC2 ออกเน็ตไปโหลดโปรแกรมได้
+  associate_public_ip_address = true
+  
   root_block_device {
     volume_size = 30
   }
-  user_data = templatefile("./tools-install.sh", {})
+  user_data = templatefile("${path.module}/tools-install.sh", {})
 
   tags = {
     Name = var.instance-name
