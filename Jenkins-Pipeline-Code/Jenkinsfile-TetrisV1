@@ -3,7 +3,7 @@ pipeline {
     tools {
         nodejs 'nodejs'
     }
-    environment  {
+    environment {
         SCANNER_HOME=tool 'sonar-scanner'
     }
     stages {
@@ -44,7 +44,20 @@ pipeline {
         stage('OWASP Dependency-Check Scan') {
             steps {
                 dir('Tetris-V1') {
-                    dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                    sh 'aws s3 sync s3://cache-bucket-roonyai/nvd-cache /var/lib/jenkins/nvd-cache --quiet || true'
+                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                        sh """
+                            /var/lib/jenkins/tools/org.jenkinsci.plugins.DependencyCheck.tools.DependencyCheckInstallation/DP-Check/bin/dependency-check.sh \
+                            --scan ./ \
+                            --disableYarnAudit \
+                            --disableNodeAudit \
+                            --nvdApiKey \$NVD_API_KEY \
+                            --data /var/lib/jenkins/nvd-cache \
+                            --format XML \
+                            --out .
+                        """
+                    }
+                    sh 'aws s3 sync /var/lib/jenkins/nvd-cache s3://cache-bucket-roonyai/nvd-cache --quiet'
                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
                 }
             }
@@ -57,10 +70,16 @@ pipeline {
             }
         }
         stage("Docker Image Build") {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'dev'
+                }
+            }
             steps {
                 script {
                     dir('Tetris-V1') {
-                        withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        withDockerRegistry(credentialsId: 'docker') {
                             sh 'docker system prune -f'
                             sh 'docker build -t tetrisv1 .'
                         }
@@ -69,30 +88,41 @@ pipeline {
             }
         }
         stage("Docker Image Pushing") {
+            when {
+                branch 'main'
+            }
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
-                        sh 'docker tag tetrisv1 itoniton/tetrisv1:${BUILD_NUMBER}'
-                        sh 'docker push itoniton/tetrisv1:${BUILD_NUMBER}'
+                    withDockerRegistry(credentialsId: 'docker') {
+                        sh "docker tag tetrisv1 itoniton/tetrisv1:${BUILD_NUMBER}"
+                        sh "docker push itoniton/tetrisv1:${BUILD_NUMBER}"
                     }
                 }
             }
         }
         stage("TRIVY Image Scan") {
+            when {
+                branch 'main'
+            }
             steps {
-                sh 'trivy image itoniton/tetrisv1:${BUILD_NUMBER} > trivyimage.txt'
+                sh "trivy image itoniton/tetrisv1:${BUILD_NUMBER} > trivyimage.txt"
             }
         }
         stage('Checkout Code') {
+            when {
+                branch 'main'
+            }
             steps {
                 git branch: 'main', url: 'https://github.com/kamonphankanthayod/devsecops-game-pipeline.git'
             }
         }
         stage('Update Deployment file') {
+            when {
+                branch 'main'
+            }
             environment {
-                GIT_USER_NAME = "kamonphankanthayod" 
+                GIT_USER_NAME = "kamonphankanthayod"
                 GIT_REPO_NAME = "devsecops-game-pipeline"
-
                 MY_GIT_NAME = "Toninwza"
                 MY_GIT_EMAIL = "terozeryt@gmail.com"
             }
