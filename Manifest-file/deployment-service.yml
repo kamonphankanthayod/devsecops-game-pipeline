@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: tetris
-          image: itoniton/tetrisv1:7
+          image: itoniton/tetrisv1:8
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
