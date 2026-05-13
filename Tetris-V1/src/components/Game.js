@@ -80,9 +80,9 @@ export const Game = (props) => {
                         Soft Drop: Arrow Down <br />
                     </p>
                     <div className={styles.podInfo}>
-                        Served by pod: {window.POD_NAME || "unknown"}
+                        Served by pod: {process.env.REACT_APP_POD_NAME || "unknown"}
                         <br />
-                        Worker node: {window.NODE_NAME || "unknown"}
+                        Worker node: {process.env.REACT_APP_NODE_NAME || "unknown"}
                     </div>
                 </div>
             </div>

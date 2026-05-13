@@ -20,4 +20,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Create pod.js at container runtime, then start React app
-CMD sh -c "echo \"window.POD_NAME='${POD_NAME}';\" > /app/public/pod.js && echo \"window.NODE_NAME='${NODE_NAME}';\" >> /app/public/pod.js && npm start"
+CMD sh -c "echo \"REACT_APP_POD_NAME=$POD_NAME\" > .env && echo \"REACT_APP_NODE_NAME=$NODE_NAME\" >> .env && npm start"
