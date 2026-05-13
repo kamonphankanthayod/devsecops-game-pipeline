@@ -46,7 +46,8 @@ export const Game = (props) => {
 
     return (
         <div className={styles.content}>
-            <div className={styles.header}><span>React - Tetris for test CI</span></div>
+            
+            <div className={styles.header}><span>React - Tetris v2</span></div>
 
             <div className={styles.matrix}>
                 {matrix}
@@ -78,6 +79,7 @@ export const Game = (props) => {
                         Right: Arrow Right <br/>
                         Soft Drop: Arrow Down <br/>
                     </p>
+                    <div className={styles.podInfo}> Served by pod: {process.env.REACT_APP_POD_NAME || "unknown"} </div>
                 </div>
             </div>
         </div>
