@@ -1,10 +1,10 @@
 import Next from "./Next.js";
 import Score from "./Score.js";
 import Level from "./Level.js";
-import {createMatrix} from "../helpers/Helpers";
-import React, {useState, useEffect} from 'react';
+import { createMatrix } from "../helpers/Helpers";
+import React, { useState, useEffect } from 'react';
 import styles from "./Game.module.css";
-import {emtpyPiece} from "../tetris/Piece";
+import { emtpyPiece } from "../tetris/Piece";
 
 export const Game = (props) => {
     const tetris = props.tetris;
@@ -16,7 +16,7 @@ export const Game = (props) => {
 
     useEffect(() => {
         tetris.onStateChange(onStateChange);
-        document.title ="React Tetris";
+        document.title = "React Tetris";
     }, [tetris]);
 
 
@@ -46,7 +46,8 @@ export const Game = (props) => {
 
     return (
         <div className={styles.content}>
-            <div className={styles.header}><span>React - Tetris for test CI</span></div>
+
+            <div className={styles.header}><span>React - Tetris v2</span></div>
 
             <div className={styles.matrix}>
                 {matrix}
@@ -54,10 +55,10 @@ export const Game = (props) => {
             </div>
             <div className={styles.controls}>
                 <div className={styles.controlsNext}>
-                    <Next next={visibleNextPiece}/>
+                    <Next next={visibleNextPiece} />
                 </div>
                 <div className={styles.controlsScore}>
-                    <Score score={state.score()}/>
+                    <Score score={state.score()} />
                 </div>
                 <div className={styles.controlsLevel}>
                     <Level level={state.level()}></Level>
@@ -72,12 +73,17 @@ export const Game = (props) => {
                 </div>
                 <div className={styles.controlsInfo}>
                     <p class="infoText">
-                        Start/Pause/Resume: Space <br/>
-                        Rotate: Arrow Up <br/>
-                        Left: Arrow Left <br/>
-                        Right: Arrow Right <br/>
-                        Soft Drop: Arrow Down <br/>
+                        Start/Pause/Resume: Space <br />
+                        Rotate: Arrow Up <br />
+                        Left: Arrow Left <br />
+                        Right: Arrow Right <br />
+                        Soft Drop: Arrow Down <br />
                     </p>
+                    <div className={styles.podInfo}>
+                        Served by pod: {process.env.REACT_APP_POD_NAME || "unknown"}
+                        <br />
+                        Worker node: {process.env.REACT_APP_NODE_NAME || "unknown"}
+                    </div>
                 </div>
             </div>
         </div>

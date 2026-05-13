@@ -1,5 +1,5 @@
 # Use the official Node.js 16 image as the base image
-FROM node:16
+FROM node:20
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install project dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application code to the container
 COPY . .
@@ -19,5 +19,5 @@ RUN NODE_OPTIONS=--openssl-legacy-provider npm run build
 # Expose the port that the app will run on (usually 3000 by default)
 EXPOSE 3000
 
-# Start the React app when the container starts
-CMD [ "npm", "start" ]
+# Create pod.js at container runtime, then start React app
+CMD sh -c "echo \"REACT_APP_POD_NAME=$POD_NAME\" > .env && echo \"REACT_APP_NODE_NAME=$NODE_NAME\" >> .env && npm start"

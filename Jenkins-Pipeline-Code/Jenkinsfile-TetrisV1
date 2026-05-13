@@ -7,6 +7,17 @@ pipeline {
         SCANNER_HOME=tool 'sonar-scanner'
     }
     stages {
+        stage('Check Skip CI') {
+            steps {
+                script {
+                    def commitMsg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                    if (commitMsg.contains('[skip ci]')) {
+                        currentBuild.result = 'NOT_BUILT'
+                        return
+                    }
+                }
+            }
+        }
         stage('Cleaning Workspace') {
             steps {
                 cleanWs()

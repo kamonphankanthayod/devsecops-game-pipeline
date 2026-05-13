@@ -17,10 +17,21 @@ spec:
     spec:
       containers:
         - name: tetris
-          image: itoniton/tetrisv1:2
+          image: itoniton/tetrisv1:12
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
+
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+
 ---
 apiVersion: v1
 kind: Service
