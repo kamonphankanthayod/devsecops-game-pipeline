@@ -1,5 +1,5 @@
 # Use the official Node.js 16 image as the base image
-FROM node:16
+FROM node:20
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install project dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application code to the container
 COPY . .
