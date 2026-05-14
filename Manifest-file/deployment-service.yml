@@ -13,7 +13,7 @@ spec:
   template:
     metadata:
       labels:
-        app: top
+        app: tetris
     spec:
       containers:
         - name: tetris
